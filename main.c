@@ -6,6 +6,8 @@
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 
+static float aspectRatio = 1.0f;
+
 struct Position {
     float       x;
     float       y;
@@ -28,14 +30,15 @@ struct CircleBufferData {
 };
 
 struct CircleBufferData circleToBufferData(struct Circle c) {
+    float z = 0.0f;
     struct CircleBufferData bd = {
         .quad = {
-            -c.radius, -c.radius, 0.0f,
-            -c.radius,  c.radius, 0.0f,
-             c.radius,  c.radius, 0.0f,
-            -c.radius, -c.radius, 0.0f,
-             c.radius,  c.radius, 0.0f,
-             c.radius, -c.radius, 0.0f
+            -c.radius, -c.radius, z,
+            -c.radius,  c.radius, z,
+             c.radius,  c.radius, z,
+            -c.radius, -c.radius, z,
+             c.radius,  c.radius, z,
+             c.radius, -c.radius, z
         }
     };
     
@@ -44,7 +47,7 @@ struct CircleBufferData circleToBufferData(struct Circle c) {
 
 void circleToWorldTransform(struct Circle c, mat4 dest) {
     mat4_identity(dest);
-    mat4_translate(dest, (vec3){c.position.x, c.position.y, 0.0f});
+    mat4_translation(dest, (vec3){c.position.x, c.position.y, 0.0f});
 }
 
 char* readFileToString(const char* file) {
@@ -152,6 +155,7 @@ void glfwErrorCallback(int error, const char* message) {
 
 void glfwFramebufferSizeCallback(GLFWwindow* _window, int width, int height) {
     glViewport(0, 0, width, height);
+    aspectRatio = width / height;
 }
 
 void glfwProcessInput(GLFWwindow* window) {
@@ -214,20 +218,28 @@ int main() {
     glEnableVertexAttribArray(0);
 
     glUseProgram(circleShaderHandle);
-    char circleWorldBasedModelTransformUniformName[] = "worldBasedModelTransform";
-    uint32_t circleWorldBasedModelTransformUL = glGetUniformLocation(circleShaderHandle, circleWorldBasedModelTransformUniformName);
+    char modelToWorldMatrixUniformName[] = "modelToWorldMatrix";
+    uint32_t modelToWorldMatrixUL = glGetUniformLocation(circleShaderHandle, modelToWorldMatrixUniformName);
 
-    mat4 viewMatrix;
-    /* vec3 cameraEye = { 0.0f, 0.0f, 5.0f }; */
-    /* vec3 center = { 0.0f, 0.0f, 0.0f }; */
-    /* vec3 up = { 0.0f, 1.0f, 0.0f }; */
-    mat4_identity(viewMatrix);
-    /* mat4_lookat(viewMatrix, cameraEye, center, up); */
-    mat4_translate(viewMatrix, (vec3){0.0f, 0.0f, -5.0f});
+    mat4 worldToCameraMatrix;
+    vec3 eye = { 0.0f, 0.0f, 2.0f };
+    vec3 center = { 0.0f, 0.0f, 0.0f };
+    vec3 up = { 0.0f, 1.0f, 0.0f };
+    mat4_lookat(worldToCameraMatrix, eye, center, up);
 
-    char viewMatrixUniformName[] = "viewMatrix";
-    uint32_t viewMatrixUL = glGetUniformLocation(circleShaderHandle, viewMatrixUniformName);
-    glUniformMatrix4fv(viewMatrixUL, 1, GL_TRUE, (float *)viewMatrix);
+    char worldToCameraMatrixUniformName[] = "worldToCameraMatrix";
+    uint32_t worldToCameraMatrixUL = glGetUniformLocation(circleShaderHandle, worldToCameraMatrixUniformName);
+    glUniformMatrix4fv(worldToCameraMatrixUL, 1, GL_TRUE, (float*)worldToCameraMatrix);
+
+    mat4 cameraToScreenMatrix;
+    mat4_perspective(cameraToScreenMatrix, 60.0f, 640.0f / 480.0f, 0.1f, 100.0f);
+
+    char cameraToScreenMatrixUniformName[] = "cameraToScreenMatrix";
+    uint32_t cameraToScreenMatrixUL = glGetUniformLocation(circleShaderHandle, cameraToScreenMatrixUniformName);
+    glUniformMatrix4fv(cameraToScreenMatrixUL, 1, GL_TRUE, (float*)cameraToScreenMatrix);
+    
+    uint32_t radiusUL = glGetUniformLocation(circleShaderHandle, "modelRadius");
+    glUniform1f(radiusUL, circle.radius);
 
     float lastFrameTime = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
@@ -248,7 +260,7 @@ int main() {
         mat4 circleTransform;
         circleToWorldTransform(circle, circleTransform);
         glBufferData(GL_ARRAY_BUFFER, sizeof(struct CircleBufferData), &circleBd, GL_STATIC_DRAW);
-        glUniformMatrix4fv(circleWorldBasedModelTransformUL, 1, GL_TRUE, (float *)circleTransform);
+        glUniformMatrix4fv(modelToWorldMatrixUL, 1, GL_TRUE, (float*)circleTransform);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         glfwSwapBuffers(window);

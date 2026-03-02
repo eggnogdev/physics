@@ -1,12 +1,12 @@
 #version 440 core
 
-in vec3 modelBasedFragmentPosition;
+in vec3 vertexPosition;
 
 uniform float modelRadius;
 
 out vec4 FragColor;
 
 void main() {
-    /* if (length(modelBasedFragmentPosition) > modelRadius) discard; */
-    FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    if (length(vertexPosition) > modelRadius) discard;
+    FragColor = vec4(1.0);
 }

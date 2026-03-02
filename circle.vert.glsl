@@ -1,13 +1,14 @@
 #version 440 core
 
-layout(location = 0) in vec3 screenBasedVertexPosition;
+layout(location = 0) in vec3 position;
 
-uniform mat4 worldBasedModelTransform;
-uniform mat4 viewMatrix;
+uniform mat4 modelToWorldMatrix;
+uniform mat4 worldToCameraMatrix;
+uniform mat4 cameraToScreenMatrix;
 
-out vec3 modelBasedFragmentPosition;
+out vec3 vertexPosition;
 
 void main() {
-    gl_Position = viewMatrix * worldBasedModelTransform * vec4(screenBasedVertexPosition, 1.0);
-    modelBasedFragmentPosition = screenBasedVertexPosition;
+    gl_Position = cameraToScreenMatrix * worldToCameraMatrix * modelToWorldMatrix * vec4(position, 1.0);
+    vertexPosition = position;
 }
