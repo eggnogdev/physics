@@ -1,5 +1,7 @@
 #include <alloca.h>
+#include "array.h"
 #include "linalg.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,7 +54,7 @@ void circleToWorldTransform(struct Circle c, mat4 dest) {
 
 char* readFileToString(const char* file) {
     char* buffer = NULL;
-    uint64_t length = 0;
+    int64_t length = 0;
     FILE* filePointer = fopen(file, "rb");
 
     if (filePointer == NULL) {
@@ -63,7 +65,7 @@ char* readFileToString(const char* file) {
         fseek(filePointer, 0, SEEK_SET);
         buffer = malloc(length + 1);
         if (buffer == NULL) {
-            fprintf(stderr, "Failed to malloc %d bytes\n", length + 1);
+            fprintf(stderr, "Failed to malloc %ld bytes\n", length + 1);
             return NULL;
         } else {
             // TODO: error handle?
