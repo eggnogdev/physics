@@ -1,3 +1,5 @@
+#ifndef __PHYSICS_LINALG_H
+#define __PHYSICS_LINALG_H
 #include <math.h>
 
 typedef float   vec3[3];
@@ -128,3 +130,5 @@ void mat4_perspective(mat4 dest, float fov, float aspect, float near, float far)
     dest[2][3] = (2.0f * far * near) / (near - far);
     dest[3][2] = -1.0f;
 }
+
+#endif // __PHYSICS_LINALG_H

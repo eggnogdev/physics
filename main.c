@@ -1,31 +1,18 @@
+#include "glad/glad.h"
+
 #include <alloca.h>
-#include "array.h"
-#include "linalg.h"
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "glad/glad.h"
 #include <GLFW/glfw3.h>
 
+#include "array.h"
+#include "circle.h"
+#include "linalg.h"
+
 static float aspectRatio = 1.0f;
-
-struct Position {
-    float       x;
-    float       y;
-};
-
-struct Velocity {
-    float       x;
-    float       y;
-};
-
-struct Circle {
-    float               radius;
-    float               mass;
-    struct Velocity     velocity;
-    struct Position     position;
-};
 
 struct CircleBufferData {
     float       quad[18];
