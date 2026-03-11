@@ -2,6 +2,7 @@
 #define __PHYSICS_ARRAY_H
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define DEFINE_DYNAMIC_ARRAY(arr_type, arr_name)                                \
     struct dynamic_##arr_name {                                                 \
@@ -32,6 +33,15 @@
         }                                                                       \
                                                                                 \
         (*a)->length += count;                                                  \
-    }                                                                           
+    }                                                                           \
+                                                                                \
+    arr_type dynamic_##arr_name##_pop(struct dynamic_##arr_name **a) {          \
+        size_t length = (*a)->length;                                           \
+        arr_type *e = &(*a)->elements[length - 1];                              \
+        arr_type popped = *e;                                                   \
+        memset(e, 0, sizeof(arr_type));                                         \
+        /* TODO: decrease size of array if it is now lte half size */           \
+        return popped;                                                          \
+    }
 
 #endif // __PHYSICS_ARRAY_H
