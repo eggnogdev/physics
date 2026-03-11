@@ -23,8 +23,13 @@
     void dynamic_##arr_name##_push(struct dynamic_##arr_name **a, size_t count, arr_type *elements) {   \
         size_t length = (*a)->length;                                           \
         if (length + count > (*a)->size) {                                      \
-            size_t size = (*a)->size * 2;                                       \
-            *a = realloc(*a, size);                                             \
+            size_t expand_factor = 2;                                           \
+            while (length + count > (*a)->size * expand_factor) {               \
+                expand_factor *= 2;                                             \
+            }                                                                   \
+                                                                                \
+            size_t size = (*a)->size * expand_factor;                           \
+            *a = realloc(*a, sizeof(struct dynamic_##arr_name) + sizeof(arr_type[size]));   \
             (*a)->size = size;                                                  \
         }                                                                       \
                                                                                 \
