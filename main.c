@@ -154,8 +154,11 @@ void glfwProcessInput(GLFWwindow* window) {
 }
 
 int main() {
+    struct dynamic_struct_Circle_array *circles_dynamic_array = init_dynamic_struct_Circle_array();
+    // TODO: generate 10 circles with random pos and velocity, push them to dynamic_array
+
     struct Circle circle = {
-        .radius = 0.5f,
+        .radius = 0.125f,
         .mass = 5.0f,
         .velocity = {
             .x = 0.0f,
@@ -257,5 +260,6 @@ int main() {
     }
 
     glfwTerminate();
+    destroy_dynamic_struct_Circle_array(&circles_dynamic_array);
     return 0;
 }

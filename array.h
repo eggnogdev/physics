@@ -20,6 +20,12 @@
         return a;                                                               \
     }                                                                           \
                                                                                 \
+    void destroy_dynamic_##arr_name(struct dynamic_##arr_name **a) {            \
+        memset(*a, 0, sizeof(struct dynamic_##arr_name) + sizeof(arr_type[(*a)->size]));    \
+        free(*a);                                                               \
+        *a = NULL;                                                              \
+    }                                                                           \
+                                                                                \
     void dynamic_##arr_name##_push(struct dynamic_##arr_name **a, size_t count, arr_type *elements) {   \
         size_t length = (*a)->length;                                           \
         if (length + count > (*a)->size) {                                      \
