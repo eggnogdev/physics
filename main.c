@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <GLFW/glfw3.h>
 
 #include "array.h"
@@ -153,9 +154,29 @@ void glfwProcessInput(GLFWwindow* window) {
     }
 }
 
+float rand_float(float min, float max) {
+    return ((float)rand() / (float)RAND_MAX) * (max - min) + min;
+}
+
 int main() {
+    srand(time(NULL));
     struct dynamic_struct_Circle_array *circles_dynamic_array = init_dynamic_struct_Circle_array();
-    // TODO: generate 10 circles with random pos and velocity, push them to dynamic_array
+    for (int i = 0; i < 10; i++) {
+        struct Circle c = {
+            .radius = 0.125f,
+            .mass = 5.0f,
+            .velocity = {
+                .x = 0.0f,
+                .y = rand_float(0.0f, 5.0f),
+            },
+            .position = {
+                .x = rand_float(-1.0f, 1.0f),
+                .y = 0.0f,
+            },
+        };
+
+        dynamic_struct_Circle_array_push(&circles_dynamic_array, 1, &c);
+    }
 
     struct Circle circle = {
         .radius = 0.125f,
@@ -245,6 +266,8 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         applyGravity(deltaTime, &circle);
+        // TODO: apply gravity to all circles in circles_dynamic_array
+        // TODO: display all circles in circles_dynamic_array
 
         glUseProgram(circleShaderHandle);
         glBindVertexArray(VAO);
