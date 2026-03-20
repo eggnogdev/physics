@@ -26,6 +26,22 @@
         *a = NULL;                                                              \
     }                                                                           \
                                                                                 \
+    void dynamic_##arr_name##_set_size(struct dynamic_##arr_name **a, size_t size) {    \
+        size_t current_size = (*a)->size;                                       \
+        if (current_size == size) return;                                       \
+        size_t current_length = (*a)->length;                                   \
+                                                                                \
+        if (size > current_size) {                                              \
+            *a = realloc(*a, sizeof(struct dynamic_##arr_name) + sizeof(arr_type[size]));   \
+            (*a)->size = size;                                                  \
+        } else {                                                                \
+            memset(&(*a)->elements[current_length], 0, sizeof(arr_type[current_size - current_length]));    \
+            *a = realloc(*a, sizeof(struct dynamic_##arr_name) + sizeof(arr_type[size]));   \
+            (*a)->size = size;                                                  \
+            if (size < current_length) (*a)->length = size;                     \
+        }                                                                       \
+    }                                                                           \
+                                                                                \
     void dynamic_##arr_name##_push(struct dynamic_##arr_name **a, size_t count, arr_type *elements) {   \
         size_t length = (*a)->length;                                           \
         if (length + count > (*a)->size) {                                      \
@@ -35,8 +51,7 @@
             }                                                                   \
                                                                                 \
             size_t size = (*a)->size * expand_factor;                           \
-            *a = realloc(*a, sizeof(struct dynamic_##arr_name) + sizeof(arr_type[size]));   \
-            (*a)->size = size;                                                  \
+            dynamic_##arr_name##_set_size(a, size);                             \
         }                                                                       \
                                                                                 \
         for (size_t i = 0; i < count; i++) {                                    \
