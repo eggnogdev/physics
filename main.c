@@ -13,6 +13,8 @@
 #include "circle.h"
 #include "linalg.h"
 
+DEFINE_DYNAMIC_ARRAY(float, float_array);
+
 static float aspectRatio = 1.0f;
 
 struct CircleBufferData {
@@ -125,9 +127,11 @@ uint32_t createShaderFromFile(const char* vertexShaderFile, const char* fragment
     return createShader(vertexShader, fragmentShader);
 }
 
-void applyGravity(float timestep, struct Circle* circle) {
-    circle->velocity.y -= (9.815f * timestep);
-    circle->position.y += (circle->velocity.y * timestep);
+void applyGravity(float timestep, size_t count, struct Circle* circle) {
+    for (size_t i = 0; i < count; i++) {
+        circle[i].velocity.y -= (9.815f * timestep);
+        circle[i].position.y += (circle[i].velocity.y * timestep);
+    }
 }
 
 void displayCircle(struct Circle* circle) {
@@ -177,6 +181,9 @@ int main() {
 
         dynamic_struct_Circle_array_push(&circles_dynamic_array, 1, &c);
     }
+
+    struct dynamic_float_array *circles_position_buffer = init_dynamic_float_array();
+    dynamic_float_array_set_size(&circles_position_buffer, circles_dynamic_array->length * 2);
 
     struct Circle circle = {
         .radius = 0.125f,
@@ -265,8 +272,8 @@ int main() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        applyGravity(deltaTime, &circle);
-        // TODO: apply gravity to all circles in circles_dynamic_array
+        // applyGravity(deltaTime, &circle);
+        applyGravity(deltaTime, circles_dynamic_array->length, circles_dynamic_array->elements);
         // TODO: display all circles in circles_dynamic_array
 
         glUseProgram(circleShaderHandle);
@@ -284,5 +291,6 @@ int main() {
 
     glfwTerminate();
     destroy_dynamic_struct_Circle_array(&circles_dynamic_array);
+    destroy_dynamic_float_array(&circles_position_buffer);
     return 0;
 }
