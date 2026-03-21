@@ -12,6 +12,7 @@
 #include "array.h"
 #include "circle.h"
 #include "linalg.h"
+#include "shader.h"
 
 DEFINE_DYNAMIC_ARRAY(float, float_array);
 
@@ -40,91 +41,6 @@ struct CircleBufferData circleToBufferData(struct Circle c) {
 void circleToWorldTransform(struct Circle c, mat4 dest) {
     mat4_identity(dest);
     mat4_translation(dest, (vec3){c.position.x, c.position.y, 0.0f});
-}
-
-char* readFileToString(const char* file) {
-    char* buffer = NULL;
-    int64_t length = 0;
-    FILE* filePointer = fopen(file, "rb");
-
-    if (filePointer == NULL) {
-        fprintf(stderr, "Failed to open file: %s\n", file);
-    } else {
-        fseek(filePointer, 0, SEEK_END);
-        length = ftell(filePointer);
-        fseek(filePointer, 0, SEEK_SET);
-        buffer = malloc(length + 1);
-        if (buffer == NULL) {
-            fprintf(stderr, "Failed to malloc %ld bytes\n", length + 1);
-            return NULL;
-        } else {
-            // TODO: error handle?
-            fread(buffer, 1, length, filePointer);
-        }
-    }
-
-    fclose(filePointer);
-    return buffer;
-}
-
-uint32_t compileShader(uint32_t type, const char* source) {
-    uint32_t handle = glCreateShader(type);
-    glShaderSource(handle, 1, &source, NULL);
-    glCompileShader(handle);
-
-    int result;
-    glGetShaderiv(handle, GL_COMPILE_STATUS, &result);
-    if (result == GL_FALSE) {
-        int length;
-        glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &length);
-
-        // dynamically allocate onto the stack.
-        char* message = (char*)alloca(length * sizeof(char));
-
-        glGetShaderInfoLog(handle, length, &length, message);
-        char typeAsString[10];
-        switch (type) {
-            case GL_VERTEX_SHADER:
-                strncpy(typeAsString, "vertex", sizeof(typeAsString));
-                break;
-            case GL_FRAGMENT_SHADER:
-                strncpy(typeAsString, "fragment", sizeof(typeAsString));
-                break;
-            default:
-                strncpy(typeAsString, "unknown", sizeof(typeAsString));
-                break;
-        }
-
-        fprintf(stderr, "Failed to compile %s shader: %s\n", typeAsString, message);
-        glDeleteShader(handle);
-        return 0;
-    }
-
-    return handle;
-}
-
-uint32_t createShader(const char* vertexShader, const char* fragmentShader) {
-    uint32_t programHandle = glCreateProgram();
-    uint32_t vertexShaderHandle = compileShader(GL_VERTEX_SHADER, vertexShader);
-    uint32_t fragmentShaderHandle = compileShader(GL_FRAGMENT_SHADER, fragmentShader);
-
-    glAttachShader(programHandle, vertexShaderHandle);
-    glAttachShader(programHandle, fragmentShaderHandle);
-    glLinkProgram(programHandle);
-    glValidateProgram(programHandle);
-
-    // can delete shader after it has been linked
-    glDeleteShader(vertexShaderHandle);
-    glDeleteShader(fragmentShaderHandle);
-
-    return programHandle;
-}
-
-uint32_t createShaderFromFile(const char* vertexShaderFile, const char* fragmentShaderFile) {
-    const char* vertexShader = readFileToString(vertexShaderFile);
-    const char* fragmentShader = readFileToString(fragmentShaderFile);
-
-    return createShader(vertexShader, fragmentShader);
 }
 
 void applyGravity(float timestep, size_t count, struct Circle* circle) {
@@ -223,7 +139,7 @@ int main() {
     glViewport(0, 0, 640, 480);
     glfwSetFramebufferSizeCallback(window, glfwFramebufferSizeCallback);
 
-    uint32_t circleShaderHandle = createShaderFromFile("circle.vert.glsl", "circle.frag.glsl");
+    uint32_t circleShaderHandle = create_shader_program_from_file("circle.vert.glsl", "circle.frag.glsl");
 
     uint32_t VAO;
     glGenVertexArrays(1, &VAO);
