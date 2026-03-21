@@ -14,15 +14,20 @@ struct Circle {
 
 DEFINE_DYNAMIC_ARRAY(struct Circle, struct_Circle_array);
 
-// Fill a buffer of floats to represent the positions of all struct Circle in `*a`.
+// Fill a buffer of floats to represent the transforms of all struct Circle in `*a`.
 //
-// This function assumes the buffer is large enough to fit all positions.
-void dynamic_struct_Circle_array_to_position_buffer(struct dynamic_struct_Circle_array *a, float *out_buffer) {
+// This function assumes the buffer is large enough to fit all transforms.
+// This function will transpose the matrix in preparation for OpenGL usage.
+void dynamic_struct_Circle_array_to_transform_buffer(struct dynamic_struct_Circle_array *a, float *out_buffer) {
     size_t count = a->length;
     for (size_t i = 0; i < count; i++) {
-        size_t buffer_i = i * 2;
-        out_buffer[buffer_i] = a->elements[i].position.x;
-        out_buffer[buffer_i + 1] = a->elements[i].position.y;
+        size_t buffer_i = i * 16;
+        mat4 T;
+        mat4_translation(T, (vec3){ a->elements[i].position.x, a->elements[i].position.y, 0.0f });
+        mat4_transpose(T, T);
+        for (size_t j = 0; j < 16; j++) {
+            out_buffer[buffer_i + j] = T[j / 4][j % 4];
+        }
     }
 }
 

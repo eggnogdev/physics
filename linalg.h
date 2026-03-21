@@ -82,6 +82,23 @@ void mat4_translate(mat4 dest, mat4 M, vec3 t) {
     mat4_mult(dest, T, M);
 }
 
+void mat4_transpose(mat4 dest, mat4 M) {
+    // TODO: improve this function
+    mat4 T; // temp matrix in case dest is also M
+    mat4_identity(T);
+    for (size_t i = 0; i < 4; i++) {
+        for (size_t j = 0; j < 4; j++) {
+            T[j][i] = M[i][j];
+        }
+    }
+
+    for (size_t i = 0; i < 4; i++) {
+        for (size_t j = 0; j < 4; j++) {
+            dest[i][j] = T[i][j];
+        }
+    }
+}
+
 void mat4_lookat(mat4 dest, vec3 eye, vec3 center, vec3 up) {
     // https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml
     mat4_identity(dest);

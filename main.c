@@ -182,8 +182,8 @@ int main() {
         dynamic_struct_Circle_array_push(&circles_dynamic_array, 1, &c);
     }
 
-    struct dynamic_float_array *circles_position_buffer = init_dynamic_float_array();
-    dynamic_float_array_set_size(&circles_position_buffer, circles_dynamic_array->length * 2);
+    struct dynamic_float_array *circles_transform_buffer = init_dynamic_float_array();
+    dynamic_float_array_set_size(&circles_transform_buffer, circles_dynamic_array->length * 16);
 
     struct Circle circle = {
         .radius = 0.125f,
@@ -272,8 +272,8 @@ int main() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // applyGravity(deltaTime, &circle);
         applyGravity(deltaTime, circles_dynamic_array->length, circles_dynamic_array->elements);
+        dynamic_struct_Circle_array_to_transform_buffer(circles_dynamic_array, circles_transform_buffer->elements);
         // TODO: display all circles in circles_dynamic_array
 
         glUseProgram(circleShaderHandle);
@@ -291,6 +291,6 @@ int main() {
 
     glfwTerminate();
     destroy_dynamic_struct_Circle_array(&circles_dynamic_array);
-    destroy_dynamic_float_array(&circles_position_buffer);
+    destroy_dynamic_float_array(&circles_transform_buffer);
     return 0;
 }
