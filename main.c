@@ -16,27 +16,9 @@
 
 DEFINE_DYNAMIC_ARRAY(float, float_array);
 
-static float aspectRatio = 1.0f;
-
-struct CircleBufferData {
-    float       quad[18];
-};
-
-struct CircleBufferData circleToBufferData(struct Circle c) {
-    float z = 0.0f;
-    struct CircleBufferData bd = {
-        .quad = {
-            -c.radius, -c.radius, z,
-            -c.radius,  c.radius, z,
-             c.radius,  c.radius, z,
-            -c.radius, -c.radius, z,
-             c.radius,  c.radius, z,
-             c.radius, -c.radius, z
-        }
-    };
-    
-    return bd;
-}
+const uint32_t START_WIDTH = 1080;
+const uint32_t START_HEIGHT = 720;
+static float aspectRatio = (float)START_WIDTH / (float)START_HEIGHT;
 
 void circleToWorldTransform(struct Circle c, mat4 dest) {
     mat4_identity(dest);
@@ -100,19 +82,8 @@ int main() {
 
     struct dynamic_float_array *circles_transform_buffer = init_dynamic_float_array();
     dynamic_float_array_set_size(&circles_transform_buffer, circles_dynamic_array->length * 16);
-
-    struct Circle circle = {
-        .radius = 0.125f,
-        .mass = 5.0f,
-        .velocity = {
-            .x = 0.0f,
-            .y = 5.0f,
-        },
-        .position = {
-            .x = 0.0f,
-            .y = 0.0f,
-        }
-    };
+    struct dynamic_float_array *circles_quad_buffer = init_dynamic_float_array();
+    dynamic_float_array_set_size(&circles_quad_buffer, circles_dynamic_array->length * 18);
 
     glfwSetErrorCallback(glfwErrorCallback);
     glfwInitHint(GLFW_PLATFORM, GLFW_ANY_PLATFORM);
@@ -124,7 +95,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API);
-    GLFWwindow* window = glfwCreateWindow(640, 480, "Physics", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(START_WIDTH, START_HEIGHT, "Physics", NULL, NULL);
     if (window == NULL) {
         glfwTerminate();
         return 1;
@@ -136,7 +107,7 @@ int main() {
         return 1;
     }
 
-    glViewport(0, 0, 640, 480);
+    glViewport(0, 0, START_WIDTH, START_HEIGHT);
     glfwSetFramebufferSizeCallback(window, glfwFramebufferSizeCallback);
 
     uint32_t circleShaderHandle = create_shader_program_from_file("circle.vert.glsl", "circle.frag.glsl");
@@ -149,13 +120,25 @@ int main() {
     glGenBuffers(1, &circlesVertexPositionVBO);
     glBindBuffer(GL_ARRAY_BUFFER, circlesVertexPositionVBO);
 
-    // specify the screenBasedVertexPosition attribute
+    dynamic_struct_Circle_array_to_vertex_buffer(circles_dynamic_array, circles_quad_buffer->elements);
+    circles_quad_buffer->length = circles_dynamic_array->length * 18;
+    glBufferData(GL_ARRAY_BUFFER, circles_quad_buffer->length * sizeof(float), circles_quad_buffer->elements, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0);
     glEnableVertexAttribArray(0);
 
+    uint32_t circlesRadiusBuffer;
+    glGenBuffers(1, &circlesRadiusBuffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, circlesRadiusBuffer);
+
+    float circle_radius_array[circles_dynamic_array->length];
+    dynamic_struct_Circle_array_to_radius_buffer(circles_dynamic_array, circle_radius_array);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(circle_radius_array), circle_radius_array, GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, circlesRadiusBuffer);
+
+    uint32_t circlesModelToWorldMatrixBuffer;
+    glGenBuffers(1, &circlesModelToWorldMatrixBuffer);
+
     glUseProgram(circleShaderHandle);
-    char modelToWorldMatrixUniformName[] = "modelToWorldMatrix";
-    uint32_t modelToWorldMatrixUL = glGetUniformLocation(circleShaderHandle, modelToWorldMatrixUniformName);
 
     mat4 worldToCameraMatrix;
     vec3 eye = { 0.0f, 0.0f, 2.0f };
@@ -163,20 +146,19 @@ int main() {
     vec3 up = { 0.0f, 1.0f, 0.0f };
     mat4_lookat(worldToCameraMatrix, eye, center, up);
 
+    // TODO: move worldToCameraMatrix and cameraToScreenMatrix to UBO
     char worldToCameraMatrixUniformName[] = "worldToCameraMatrix";
     uint32_t worldToCameraMatrixUL = glGetUniformLocation(circleShaderHandle, worldToCameraMatrixUniformName);
     glUniformMatrix4fv(worldToCameraMatrixUL, 1, GL_TRUE, (float*)worldToCameraMatrix);
 
     mat4 cameraToScreenMatrix;
-    mat4_perspective(cameraToScreenMatrix, 60.0f, 640.0f / 480.0f, 0.1f, 100.0f);
+    mat4_perspective(cameraToScreenMatrix, 60.0f, aspectRatio, 0.1f, 100.0f);
 
+    // TODO: update cameraToScreenMatrix upon viewport/framebuffer size change
     char cameraToScreenMatrixUniformName[] = "cameraToScreenMatrix";
     uint32_t cameraToScreenMatrixUL = glGetUniformLocation(circleShaderHandle, cameraToScreenMatrixUniformName);
     glUniformMatrix4fv(cameraToScreenMatrixUL, 1, GL_TRUE, (float*)cameraToScreenMatrix);
     
-    uint32_t radiusUL = glGetUniformLocation(circleShaderHandle, "modelRadius");
-    glUniform1f(radiusUL, circle.radius);
-
     float lastFrameTime = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
         float thisFrameTime = glfwGetTime();
@@ -185,21 +167,20 @@ int main() {
 
         glfwProcessInput(window);
 
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        applyGravity(deltaTime, circles_dynamic_array->length, circles_dynamic_array->elements);
+        applyGravity(deltaTime * 0.1f, circles_dynamic_array->length, circles_dynamic_array->elements);
         dynamic_struct_Circle_array_to_transform_buffer(circles_dynamic_array, circles_transform_buffer->elements);
-        // TODO: display all circles in circles_dynamic_array
+        circles_transform_buffer->length = circles_dynamic_array->length * 16;
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, circlesModelToWorldMatrixBuffer);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, circles_transform_buffer->length * sizeof(float), circles_transform_buffer->elements, GL_DYNAMIC_DRAW);  
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, circlesModelToWorldMatrixBuffer);
 
         glUseProgram(circleShaderHandle);
         glBindVertexArray(VAO);
-        struct CircleBufferData circleBd = circleToBufferData(circle);
-        mat4 circleTransform;
-        circleToWorldTransform(circle, circleTransform);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(struct CircleBufferData), &circleBd, GL_STATIC_DRAW);
-        glUniformMatrix4fv(modelToWorldMatrixUL, 1, GL_TRUE, (float*)circleTransform);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawArrays(GL_TRIANGLES, 0, circles_quad_buffer->length);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -208,5 +189,6 @@ int main() {
     glfwTerminate();
     destroy_dynamic_struct_Circle_array(&circles_dynamic_array);
     destroy_dynamic_float_array(&circles_transform_buffer);
+    destroy_dynamic_float_array(&circles_quad_buffer);
     return 0;
 }

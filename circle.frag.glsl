@@ -1,8 +1,7 @@
-#version 330 core
+#version 440 core
 
 in vec3 vertexPosition;
-
-uniform float modelRadius;
+in float modelRadius;
 
 out vec4 FragColor;
 

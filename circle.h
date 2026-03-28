@@ -12,7 +12,26 @@ struct Circle {
     struct Position     position;
 };
 
+struct CircleQuad {
+    float       positions[18];
+};
+
 DEFINE_DYNAMIC_ARRAY(struct Circle, struct_Circle_array);
+
+struct CircleQuad struct_Circle_to_struct_CircleQuad(struct Circle c) {
+    struct CircleQuad q = {
+        .positions = {
+            -c.radius, -c.radius, 0.0f,
+            -c.radius,  c.radius, 0.0f,
+             c.radius,  c.radius, 0.0f,
+            -c.radius, -c.radius, 0.0f,
+             c.radius,  c.radius, 0.0f,
+             c.radius, -c.radius, 0.0f
+        }
+    };
+
+    return q;
+}
 
 // Fill a buffer of floats to represent the transforms of all struct Circle in `*a`.
 //
@@ -28,6 +47,25 @@ void dynamic_struct_Circle_array_to_transform_buffer(struct dynamic_struct_Circl
         for (size_t j = 0; j < 16; j++) {
             out_buffer[buffer_i + j] = T[j / 4][j % 4];
         }
+    }
+}
+
+// Fill a buffer of floats to represent the vertices of all struct Circle in `*a`.
+//
+// This function assumse the buffer is large enough to fit all vertices.
+void dynamic_struct_Circle_array_to_vertex_buffer(struct dynamic_struct_Circle_array *a, float *out_buffer) {
+    size_t count = a->length;
+    for (size_t i = 0; i < count; i++) {
+        size_t buffer_i = i * 18;
+        struct CircleQuad q = struct_Circle_to_struct_CircleQuad(a->elements[i]);
+        memcpy(&out_buffer[buffer_i], q.positions, sizeof(q.positions));
+    }
+}
+
+void dynamic_struct_Circle_array_to_radius_buffer(struct dynamic_struct_Circle_array *a, float *out_buffer) {
+    size_t count = a->length;
+    for (size_t i = 0; i < count; i++) {
+        out_buffer[i] = a->elements[i].radius;
     }
 }
 
